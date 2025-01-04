@@ -1,44 +1,32 @@
+import asyncio
 import cv2
 import numpy as np
 import os,sys
 sys.path.append(os.path.join(os.getcwd(),"src"))
-from func.methods import calc_frame_diff
+from func.methods import *
+from func.video import Video
+from func.utils import add_suffix_to_filename
 
-def movediff_video(input_path, output_path):
-    cap = cv2.VideoCapture(input_path)
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-
-    ret, prev_frame = cap.read()
-    prev_gray = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2GRAY)
-    first_gray = prev_gray.copy()
-    
+async def movediff_video(input_path, output_path=None):
+    if output_path is None:
+        output_path = add_suffix_to_filename(input_path, "FrameDiff")
+    video = Video(input_path, output_path)
     while True:
-        ret, frame = cap.read()
+        ret, frame = await video.read(enable_ws=False)
         if not ret:
             break
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        results = calc_frame_diff(prev_gray, gray)
-        overlay = cv2.cvtColor(results, cv2.COLOR_BAYER_BG2BGR)
-        overlay[results>0] = [0,255,255]
-        visualization = frame.copy()
-        visualization = cv2.addWeighted(visualization,1,overlay,0.5,0)
-        cv2.imshow("Frame Diff", visualization)
-        prev_gray = gray
-        if cv2.waitKey(30) & 0xFF == 27:
-            break
-        out.write(frame)
+        results = calc_frame_diff(video.prev_gray, video.gray)
 
-    cap.release()
-    out.release()
+        mask = results > 2
+        results = getDetectionsFromMask(mask)
+        drawResultOnFrame(results, frame, "Diff")
+        
+        video.visualization = frame
+        cv2.imshow('slungshot_OpticalFlow', frame)
+        cv2.waitKey(1)
+    video.release()
     cv2.destroyAllWindows()
 
-
 if __name__ == "__main__":
-    path = "./temp/340_102_clipped_StabilizeV_ROI_StablizeV.mp4"
-    output = "./temp/340_102_clipped_StabilizeV_ROI_StablizeV_movediff.mp4"
-    movediff_video(path, output)
+    path = "./temp/123/340_102_clipped_ROI_stabv.mp4"
+    asyncio.run(movediff_video(path))

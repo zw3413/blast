@@ -7,6 +7,7 @@ from .schemas import *
 from ..func.methods import *
 from ..func.operations import *
 from ..func.queue_storage import frame_queue
+from ..func.ffmpeg_tools import get_video_info_ffmpeg
 import asyncio
 
 router = APIRouter()
@@ -39,7 +40,6 @@ async def upload_video(file : Annotated[bytes, File()], name: Annotated[str, For
         f.write(file)
     return {"msg": "", "code": "000"}
 
-
 @router.post("/run_operation")
 async def run_operation(operation: Operation):
     try:
@@ -51,9 +51,33 @@ async def run_operation(operation: Operation):
                 os.path.join(
                     temp_path, operation.ana_id, operation.options["output_path"]
                 ))
-       
-        elif operation.op == "roi":
-            pass
+        elif operation.op == "crop_roi":
+            await crop_roi(
+                os.path.join(
+                    temp_path, operation.ana_id, operation.options["input_path"]
+                ),
+                os.path.join(
+                    temp_path, operation.ana_id, operation.options["output_path"]
+                ),
+                operation.options["shape"]
+            )
+        elif operation.op == "set_pixel":
+            drill_hole_data =operation.options["drill_hole_data"]
+            output_name = add_suffix_to_filename(drill_hole_data, "_SetPixel")
+            await set_pixel(
+                os.path.join(
+                    temp_path, operation.ana_id, drill_hole_data
+                ),
+                os.path.join(
+                    temp_path, operation.ana_id, output_name
+                ),
+            )
+        elif operation.op == "slungshot":
+              await slungshot(
+                os.path.join(
+                    temp_path, operation.ana_id, operation.options["input_path"]
+                )
+            )
         return {"msg": "", "code": "000"}
     except Exception as e:
         return {"msg": str(e), "code": "001"}
@@ -81,13 +105,13 @@ def list_analysis():
         return {"msg": str(e), "code": "001"}
 
 
-@router.get("/list_videos/{ana_id}")
-def list_videos(ana_id: str):
+@router.get("/list_files/{ana_id}")
+def list_files(ana_id: str):
     try:
-        videos = []
-        for video in os.listdir(os.path.join(temp_path, ana_id)):
-            videos.append({"name": video})
-        return {"msg": "", "code": "000", "data": videos}
+        files = []
+        for file in os.listdir(os.path.join(temp_path, ana_id)):
+            files.append({"name": file})
+        return {"msg": "", "code": "000", "data": files}
     except Exception as e:
         return {"msg": str(e), "code": "001"}
 
@@ -100,3 +124,33 @@ async def get_video(ana_id: str, video_name: str):
         return FileResponse(file_path, media_type="video/mp4")
     else:
         raise HTTPException(status_code=404, detail="Video not found")
+
+@router.get("/video_info/{ana_id}/{video_id}")
+def get_video_info(ana_id: str, video_id: str):
+    file_path = os.path.join(temp_path, ana_id, video_id)
+    if os.path.exists(file_path):
+        return {"msg": "", "code": "000", "data": get_video_info_ffmpeg(file_path)}
+    else:
+        return {"msg": "Video not found", "code": "001"}
+    
+@router.post("/save_shapes")
+def save_shapes(shapes: Shapes):
+    ana_id = shapes.ana_id
+    video_id = shapes.video_id
+    name = shapes.name
+    shapes = shapes.shapes
+    try:
+        file_path = os.path.join(temp_path, ana_id, name)
+        with open(file_path, "w") as f:
+            f.write(shapes)
+        return {"msg": "", "code": "000"}
+    except Exception as e:
+        return {"msg": str(e), "code": "001"}
+    
+@router.get("/get_file/{ana_id}/{file_name}")
+def get_file(ana_id: str, file_name: str):
+    file_path = os.path.join(temp_path, ana_id, file_name)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    else:
+        raise HTTPException(status_code=404, detail="File not found")

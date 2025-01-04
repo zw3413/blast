@@ -10,6 +10,57 @@ const apiClient = axios.create({
 
 export default {
 
+    async getFile(ana_id, shapes_name) {
+        try {
+            const response = await apiClient.get(`/get_file/${ana_id}/${shapes_name}`);
+            if (response.status == 200) {
+                const resp = response.data
+                return resp;
+            } else {
+                alert(response)
+            }
+        }
+        catch (err) {
+            throw new Error(err.message || 'Failed to fetch items');
+        }
+    },
+    async saveShapes(ana_id, video_id, name, shapes) {
+        try {
+            const response = await apiClient.post('/save_shapes', { ana_id: ana_id, video_id: video_id, name: name, shapes: JSON.stringify(shapes) });
+            if (response.status == 200) {
+                const resp = response.data
+                if (resp.code != '000') {
+                    alert(resp.msg)
+                    throw new Error(resp.msg)
+                } else {
+                    return resp;
+                }
+
+            } else {
+                alert(response)
+            }
+        } catch (err) {
+            throw new Error(err.message || 'Failed to fetch items');
+        }
+    },
+    async getVideoInfo(ana_id, video_id) {
+        try {
+            const response = await apiClient.get(`/video_info/${ana_id}/${video_id}`);
+            if (response.status == 200) {
+                const resp = response.data
+                if (resp.code != '000') {
+                    alert(resp.msg)
+                    throw new Error(resp.msg)
+                } else {
+                    return resp;
+                }
+            } else {
+                alert(response)
+            }
+        }   catch (err) {
+            throw new Error(err.message || 'Failed to getVideoInfo');
+        }
+    },
     async uploadVideo(ana_id, file) {
         try {
             console.log(123)
@@ -98,10 +149,10 @@ export default {
             throw new Error(err.message || 'Failed to fetch items');
         }
     },
-    async getVideos(ana_id) {
+    async getFiles(ana_id) {
         try {
             console.log(ana_id)
-            const response = await apiClient.get('/list_videos/' + ana_id);
+            const response = await apiClient.get('/list_files/' + ana_id);
             if (response.status == 200) {
                 const resp = response.data
                 if (resp.code != '000') {

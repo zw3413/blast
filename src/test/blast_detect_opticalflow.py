@@ -1,83 +1,48 @@
+import asyncio
 import cv2
 import numpy as np
+import os,sys
+sys.path.append(os.path.join(os.getcwd(),"src"))
+from func.methods import *
+from func.utils import add_suffix_to_filename
+from func.video import Video
 
 
-def denseOpticalFlow(input_path, output_path):
-    cap = cv2.VideoCapture(input_path)
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-
-    _, frameFirst = cap.read()
-    imgPrev = cv2.cvtColor(frameFirst, cv2.COLOR_BGR2GRAY)
-    imgHSV = np.zeros_like(frameFirst)
-    imgHSV[:, :, 1] = 255
-
-    while True:
-        ret, frameCur = cap.read()
+async def slungshot_OpticalFlow(input_path, output_path=None):
+    if output_path is None:
+        output_path = add_suffix_to_filename(input_path, "SlungshotOpticalFlow")
+    video = Video(input_path, output_path)
+    imgHSV = np.zeros_like(video.frame)
+    imgHSV[:, :, 1] = 255 #saturation
+    while video.is_cap_opended():
+        ret, frame = await video.read(enable_ws=False)
         if not ret:
             break
-        imgCur = cv2.cvtColor(frameCur, cv2.COLOR_BGR2GRAY)
-        # flow = cv2.calcOpticalFlowFarneback(
-        #     prev=imgPrev,
-        #     next=imgCur,
-        #     flow=None,
-        #     pyr_scale=0.5,
-        #     levels=3,
-        #     winsize=15,
-        #     iterations=3,
-        #     poly_n=5,
-        #     poly_sigma=1.1,
-        #     flags=cv2.OPTFLOW_FARNEBACK_GAUSSIAN,
-        # )
-
-        gpu_previous = cv2.cuda_GpuMat()
-        gpu_previous.upload(imgPrev)
-        gpu_current= cv2.cuda_GpuMat()
-        gpu_current.upload(imgCur)
-        gpu_flow = cv2.cuda_FarnebackOpticalFlow.create(
-            3,  #numLevels
-            0.5 ,  #pyrScale
-            False, #fastPyramids
-            15,  #winSize
-            3,   #numItems
-            5,   #polyN
-            1.1, #polySigma 
-            0    #flags
-            )
-        aflow = cv2.cuda.GpuMat()
-        aflow = gpu_flow.calc( gpu_previous, gpu_current, aflow, None )
-        flow = aflow.download()
-
-        mag, ang = cv2.cartToPolar(flow[:, :, 0], flow[:, :, 1])
-        
-        # OpenCV H is [0,180] so divid by 2
-        imgHSV[:, :, 0] = ang * 180 / np.pi / 2
-        normalizedMag = normalize_magnitude_with_threshold(mag, 2)
-        imgHSV[:, :, 2] = normalizedMag
-
+        flow = calc_optical_flow(video.prev_gray, video.gray)
+        positive_y_flow = np.array(flow.copy())
+        negative_y_flow = flow.copy()
+        positive_y_flow[ positive_y_flow[:, :, 1] < 0 ]  = (0,0)
+        negative_y_flow[negative_y_flow[:, :, 1] > 0] = (0,0)
+        use_flow = flow
+        mag, ang = cv2.cartToPolar(use_flow[:, :, 0], use_flow[:, :, 1])
+        imgHSV = getHSVFromMagAng(mag, ang, threshold=2)
         img_BGR = cv2.cvtColor(imgHSV, cv2.COLOR_HSV2BGR)
-
-        img_show = img_BGR + frameCur
-        cv2.imshow("Frame", img_show)
-        cv2.waitKey(5)
-        imgPrev = imgCur
-        out.write(img_show)
-
-    cap.release()
-    out.release()
+        img_show = img_BGR + frame
+        
+        slungshot = detectSlungshotFromFlow(flow, min_speed=2)
+        drawResultOnFrame(slungshot, img_show, "Speed")
+        video.visualization = img_show
+        video.write_frame = img_show
+        cv2.imshow('slungshot_OpticalFlow', img_show)
+        cv2.waitKey(1)
+    video.release()
     cv2.destroyAllWindows()
 
-def normalize_magnitude_with_threshold(mag, threshold, min_output = 0, max_output = 255):
-    mag[mag<threshold] = 0 
-    min_mag = np.min(mag)
-    max_mag = np.max(mag)
-    normalized_mag = (mag-min_mag) * (max_output - min_output) / (max_mag - min_mag) + min_output
-    return normalized_mag.astype(np.uint8)
+async def testSlungshotOpticalFlow():
+    path = "./temp/123/340_102_clipped_ROI_stabv.mp4"
+    #path =  "./temp/340_102_clipped_StabilizeV_ROI_StablizeV.mp4"
+    await slungshot_OpticalFlow(path)
+
 
 if __name__ == "__main__":
-    path = "./temp/340_102_clipped_StabilizeV_ROI_StablizeV.mp4"
-    output = "./temp/optical_flow.mp4"
-    denseOpticalFlow(path, output)
+    asyncio.run(testSlungshotOpticalFlow())

@@ -9,7 +9,7 @@ from pathlib import Path
 import supervision as sv
 from strongsort.strong_sort import StrongSORT
 
-from util import YamlParser
+from src.func.utils import YamlParser
 
 
 SAVE_VIDEO =True

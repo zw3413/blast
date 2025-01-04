@@ -7,8 +7,12 @@ class Video:
         print("Initializing video")
         self.cap = cv2.VideoCapture(video_path)
         ret, self.frame = self.cap.read()
-        assert ret
+        if not ret:
+            print("Error: Cannot open video file.")
+            exit()
+        self.write_frame = None
         self.prev_gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        self.prev_frame = self.frame
         self.gray =None
         self.frame_count = 1
         self.fps = int(self.cap.get(cv2.CAP_PROP_FPS))
@@ -19,6 +23,8 @@ class Video:
         self.visualization = None
         if output_path is not None:
             self.out = cv2.VideoWriter(output_path, self.fourcc, self.fps, (self.width, self.height))
+        else:
+            self.out = None
         
     def __call__():
         pass
@@ -26,17 +32,21 @@ class Video:
     def is_cap_opended(self):
         return self.cap.isOpened()
     
-    async def read(self):
-        if self.visualization is not None:
+    async def read(self,enable_ws=True):
+        if self.visualization is not None and enable_ws:
             _, buffer = cv2.imencode('.jpg', self.visualization)
             frame_base64 = base64.b64encode(buffer).decode('utf-8')
-            await frame_queue.put(frame_base64)
-            if frame_queue.qsize() > 30:
-                await asyncio.sleep(1)
+            if frame_queue.qsize() < 30:
+                await frame_queue.put(frame_base64)
+            await asyncio.sleep(0.01)
+        if self.out is not None and (self.frame is not None or self.write_frame is not None):
+            if self.write_frame is not None:
+                self.out.write(self.write_frame)
+                self.write_frame = None
             else:
-                await asyncio.sleep(0.01)
-        if self.out is not None and self.frame is not None:
-            self.out.write(self.frame)
+                self.out.write(self.frame)
+        if self.frame is not None:
+            self.prev_frame = self.frame
         ret, self.frame = self.cap.read()
         if not ret:
             if not self.is_cap_opended():
