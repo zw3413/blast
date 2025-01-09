@@ -96,17 +96,17 @@ class opts:
         self.parser.add_argument(
             '--root_dataset',
             type=str,
-            default='/data/dyh/data/MOTChallenge'
+            default='./dataset/MOTChallenge'
         )
         self.parser.add_argument(
             '--path_AFLink',
             type=str,
-            default='/data/dyh/results/StrongSORT_Git/AFLink_epoch20.pth'
+            default='./dataset/AFLink_epoch20.pth'
         )
         self.parser.add_argument(
             '--dir_save',
             type=str,
-            default='/data/dyh/results/StrongSORT_Git/tmp'
+            default='/temp/strongSORT_output'
         )
         self.parser.add_argument(
             '--EMA_alpha',
@@ -129,10 +129,10 @@ class opts:
         opt.min_detection_height = 0
         if opt.BoT:
             opt.max_cosine_distance = 0.4
-            opt.dir_dets = '/data/dyh/results/StrongSORT_Git/{}_{}_YOLOX+BoT'.format(opt.dataset, opt.mode)
+            opt.dir_dets = './dataset/{}_{}_YOLOX+BoT'.format(opt.dataset, opt.mode)
         else:
             opt.max_cosine_distance = 0.3
-            opt.dir_dets = '/data/dyh/results/StrongSORT_Git/{}_{}_YOLOX+simpleCNN'.format(opt.dataset, opt.mode)
+            opt.dir_dets = './dataset/{}_{}_YOLOX+simpleCNN'.format(opt.dataset, opt.mode)
         if opt.MC:
             opt.max_cosine_distance += 0.05
         if opt.EMA:
@@ -140,7 +140,7 @@ class opts:
         else:
             opt.nn_budget = 100
         if opt.ECC:
-            path_ECC = '/data/dyh/results/StrongSORT_Git/{}_ECC_{}.json'.format(opt.dataset, opt.mode)
+            path_ECC = './dataset/{}_ECC_{}.json'.format(opt.dataset, opt.mode)
             opt.ecc = json.load(open(path_ECC))
         opt.sequences = data[opt.dataset][opt.mode]
         opt.dir_dataset = join(

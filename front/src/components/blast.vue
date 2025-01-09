@@ -1,10 +1,11 @@
 <template>
     <div class="flex flex-row w-full min-h-screen max-h-screen overflow-hidden text-white">
-        <div class="flex flex-col h-screen w-60">
-      
-            <ul class="flex flex-col h-full space-y-1 p-2  overflow-y-auto">
-                <li v-for="analysis in analysis_list" :key="analysis.id">
-                    <a class="text-white cursor-pointer" @click="getFiles(analysis.id)"> {{ analysis.name }}</a>
+        <div class="flex flex-col h-screen w-60 ">
+            <img src="/cotegold.png" alt="logo" class=" w-full" />
+            <ul
+                class="flex flex-col h-full space-y-1 p-2 border-r-2 border-gray-800 overflow-y-auto divide-y divide-gray-800 scrollbar">
+                <li v-for="analysis in analysis_list" :key="analysis.id" class="p-2 flex items-center ">
+                    <a class="flex text-gray-300 cursor-pointer" @click="getFiles(analysis.id)"> {{ analysis.name }}</a>
                 </li>
             </ul>
 
@@ -13,15 +14,35 @@
                     <input type="text" class="text-black p-2" v-model="analysis_name">
                     <button type="button" @click="createHandler" class="ml-auto text-white">create</button>
                 </div>
-                <img src="/cotegold.png" alt="logo" class=" w-full" />
+              
                 <img src="/gdg.png" alt="logo" class=" w-full" />
                 <img src="/laurentian.svg" alt="logo" class=" w-full bg-white" />
             </div>
         </div>
 
         <div class="w-full h-screen">
-            <div class="h-3/4 bg-black">
-                <div v-show="show == 'video'" class=" w-full h-full flex flex-row">
+
+            <div class="h-4/5 " id="default-tab-content">
+                <div class="mb-2 border-b border-gray-200 h-1/10 ">
+                    <ul class="flex flex-wrap justify-end -mb-px text-sm font-medium text-center" id="default-tab"
+                        data-tabs-toggle="#default-tab-content" role="tablist">
+                        <li class="me-2" role="presentation">
+                            <button
+                                class="inline-block p-2 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 "
+                                id="VideoPlayer-tab" data-tabs-target="#VideoPlayer" type="button" role="tab"
+                                aria-controls="VideoPlayer" :aria-selected="show == 'video'">VideoPlayer</button>
+                        </li>
+                        <li class="me-2" role="presentation">
+                            <button
+                                class="inline-block p-2 border-b-2 rounded-t-lg hover:text-gray-600 hover:border-gray-300 "
+                                id="frame_player-tab" data-tabs-target="#frame_player" type="button" role="tab"
+                                aria-controls="frame_player" :aria-selected="show == 'frame'">ProcessingMonitor</button>
+                        </li>
+
+                    </ul>
+                </div>
+                <div class="hidden rounded-lg h-9/10  w-full  flex flex-row overflow-y-auto" id="VideoPlayer"
+                    role="tabpanel" aria-labelledby="VideoPlayer-tab">
                     <div class="flex flex-col p-1 space-y-2 w-20 text-left items-center">
                         <input type="checkbox" class="mt-10" v-model="canvasCheckbox" />Draw
                         <input type="text" class="text-black w-full" v-model="current_pixel.x" placeholder="x" />
@@ -34,9 +55,12 @@
                         <button class="flex" @click="clearCanvas">clear</button>
                         <button class="flex" @click="uploadShpaes">Save</button>
                     </div>
-                    <div class="flex flex-col max-h-full w-full flex-shrink-1 min-w-[100px] overflow-x-hidden">
-                        <div ref="video_container" class=" max-h-full w-full relative" style="height: 100%; ">
-                            <video id="my-video" class="z-0 video-js  vjs-default-skin w-full max-h-full object-contain"
+                    <div
+                        class="flex flex-col max-h-full w-full flex-shrink-1 min-w-[100px] overflow-x-hidden items-center grid place-items-center">
+                        <div ref="video_container" class=" w-full relative ">
+
+                            <video id="my-video"
+                                class="z-0 video-js items-center vjs-default-skin w-full max-h-full justify-middle object-contain"
                                 controls preload="auto" :data-setup="videoSetupOptions" @loadedmetadata="resizeCanvas">
                                 <source :src="playingVideo" type="video/mp4" />
                                 <p class="vjs-no-js z-0">
@@ -47,92 +71,107 @@
                                 </p>
                             </video>
                             <canvas v-show="canvasCheckbox" id="drawing-canvas"
-                                class="absolute left-0 top-0  z-10 bg-gray-300/30"></canvas>
+                                class="absolute left-0 top-0  z-10 bg-gray-300/30 "></canvas>
+
                         </div>
                     </div>
-                    <div class="flex flex-col text-white w-80">
+                    <div class="flex flex-col text-white w-[500px] items-center justify-center">
                         video info
                     </div>
                 </div>
-                <div id="frame_player" v-show="show == 'frame'" class="w-full h-full overflow-none">
-                    <img :src="frameSrc" :key="frameKey" alt="Processing Frame"
-                        class="mx-auto h-full w-auto object-contain" />
+
+                <div id="frame_player" class="hidden p-4 rounded-lg  flex flex-row w-full h-full overflow-none"
+                    role="tabpanel" aria-labelledby="frame_player-tab">
+                    <div class=" min-w-20 ">  </div>
+                    <div>
+                        
+                    <img :src="frameSrc" ref="frame_img" :key="frameKey" alt="Processing Frame"
+                        class="flex-shrink-1   justify-left object-contain w-full max-h-full object-contain" />
+                </div>
+                
+                    <div class="flex flex-col text-white w-[500px] items-center justify-center"></div>
                 </div>
             </div>
-            <div class="flex flex-row h-1/4  z-20 ">
-               <div class="w-1/5"></div>
+<!--operations-->
+            <div class="flex flex-row h-1/5  z-20 border-t-2 border-gray-800">
+                <div class="w-1/5"></div>
                 <div class="w-1/5 p-2">
                     <div class="flex items-center ">
-                        <input id="default-radio-1" type="radio" value="stab_vid"  v-model="selectedOperation"
+                        <input id="default-radio-1" type="radio" value="stab_vid" v-model="selectedOperation"
                             name="selectedOperation"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="default-radio-1"
-                            class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Stablize Vidstab</label>
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
+                        <label for="default-radio-1" class="ms-2 text-sm font-medium text-gray-300 ">Stablize
+                            Vidstab</label>
                     </div>
                     <div class="flex items-center">
                         <input checked id="default-radio-2" type="radio" value="crop_roi" v-model="selectedOperation"
                             name="selectedOperation"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="default-radio-2"
-                            class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Crop ROI</label>
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Crop ROI</label>
                     </div>
 
                     <div class="flex items-center">
                         <input checked id="default-radio-2" type="radio" value="set_pixel" v-model="selectedOperation"
                             name="selectedOperation"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="default-radio-2"
-                            class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Set Pixel</label>
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500  focus:ring-2 ">
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Set Pixel</label>
                     </div>
 
                     <div class="flex items-center">
-                        <input checked id="default-radio-2" type="radio" value="slungshot" 
-                            v-model="selectedOperation" name="selectedOperation"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="default-radio-2"
-                            class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Detect Slungshot</label>
+                        <input checked id="default-radio-2" type="radio" value="slungshot" v-model="selectedOperation"
+                            name="selectedOperation"
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Slungshot</label>
                     </div>
 
                     <div class="flex items-center">
-                        <input checked id="default-radio-2" type="radio" value="fragmentation"  
+                        <input checked id="default-radio-2" type="radio" value="fragmentation"
                             v-model="selectedOperation" name="selectedOperation"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="default-radio-2"
-                            class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Detect Fragmentation</label>
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Fragmentation</label>
                     </div>
 
                     <div class="flex items-center">
-                        <input checked id="default-radio-2" type="radio" value="smoke" 
-                            v-model="selectedOperation" name="selectedOperation"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="default-radio-2"
-                            class="ms-2 text-sm font-medium text-gray-900 dark:text-gray-300">Detect Smoke</label>
+                        <input checked id="default-radio-2" type="radio" value="smoke" v-model="selectedOperation"
+                            name="selectedOperation"
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Smoke</label>
                     </div>
 
                 </div>
                 <div class="w-1/5 p-2 space-y-2">
                     <div v-for="param in selectedOperationParams" :key="param.name">
-                        <input type="text" class="text-black" v-model="operationOptions[param.name]"
-                            :placeholder="param.description" required />
+
+                        <input v-if="param.type == 'input'" type="text" class="text-black"
+                            v-model="operationOptions[param.name]" :placeholder="param.description" required />
+
+                        <div v-if="param.type == 'combobox'">
+                            <label>{{ param.description }} </label>
+                            <select class="text-black ml-2 w-20" v-model="operationOptions[param.name]">
+                                <option v-for="option in param.options" :key="option" :value="option">{{ option }}
+                                </option>
+                            </select>
+                        </div>
+
                     </div>
-                    <button @click="runOperation()">Run</button>
-             
+                    <button :disabled="run_disabled == true" @click="runOperation()">{{ run_btn_text }}</button>
+
                 </div>
-                <div class="w-2/5 h-full p-2 overflow-y-auto">
+                <div class="w-2/5 h-full p-2 overflow-y-auto scrollbar">
                     <div class="flex flex-row" v-if="selectedAnalysis">
                         <input ref="video_input"
-                            class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400"
+                            class="block w-100 text-xs text-gray-800 border border-gray-300 rounded-lg cursor-pointer bg-gray-50  focus:outline-none   "
                             @change="uploadVideo" id="file_input" type="file">
                     </div>
                     <ul class="">
                         <li v-for="file in file_list" :key="file.id">
-                            <a @click="selectFile(file)" class="cursor-pointer">{{ file.name }}</a>
+                            <a @click="selectFile(file)" class="cursor-pointer text-gray-300">{{ file.name }}</a>
                         </li>
                     </ul>
                 </div>
             </div>
         </div>
-    <div class="fixed bottom-0 right-0"></div>
+        <div class="fixed bottom-0 right-0"></div>
     </div>
 </template>
 
@@ -142,7 +181,8 @@ import 'video.js/dist/video-js.css';
 import api from '@/services/api';
 import config from '@/config';
 import { layer } from '@layui/layui-vue';
-import { nextTick } from 'vue';
+import { nextTick, ref } from 'vue';
+import { initFlowbite } from 'flowbite'
 
 export default {
     data() {
@@ -163,6 +203,8 @@ export default {
             canvasCheckbox: false,
             drawType: 'point',
             frameKey: 0,  // Key to force re-rendering of the image
+            run_disabled: false,
+            run_btn_text: "Run",
             videoSetupOptions: JSON.stringify({
                 autoplay: false,
                 controls: true,
@@ -171,12 +213,13 @@ export default {
             operationOptions: {
                 input_path: "",
                 output_path: "",
+                shape_str: "",
                 stab_vid: {
 
                 }
             },
             drawing: false,
-            shapes: [],
+            shapes: ref([]),
             zoom_ratio: null,
             current_pixel: {
                 x: 0,
@@ -187,6 +230,7 @@ export default {
 
     },
     mounted() {
+        initFlowbite();
         this.getAnalysis()
         try {
             this.player = videojs("#my-video", {
@@ -201,6 +245,13 @@ export default {
         this.connectWebSocket();
     },
     watch: {
+        show() {
+            if (this.show == 'frame') {
+                document.getElementById("frame_player-tab").click()
+            } else if (this.show == 'video') {
+                document.getElementById("VideoPlayer-tab").click()
+            }
+        },
         selectedVideo() {
             //this.resizeVideo()
             if (this.selectedVideo) {
@@ -248,12 +299,12 @@ export default {
     methods: {
         resizeVideo() {
             if (this.selectedVideo == null) {
-                debugger
+
                 this.player.width(this.$refs.video_container.clientWidth)
                 this.player.height(this.$refs.video_container.clientHeight)
             } else {
                 //this.player.width(this.$refs.video_container.clientWidth)
-                debugger
+
                 this.player.height(this.$refs.video_container.clientHeight)
             }
         },
@@ -271,7 +322,8 @@ export default {
             return `${config.backendUrl}/video/${this.selectedAnalysis}/${video.name}`
         },
         selectFile(file) {
-            const suffix = file.name.split('.')[file.name.split('.').length - 1]
+            this.operationOptions.input_path = file.name
+            const suffix = file.name.split('.')[file.name.split('.').length - 1].toLowerCase()
             if (suffix == 'mp4') {
                 this.selectedVideo = file
             } else if (suffix == 'json') {
@@ -287,33 +339,39 @@ export default {
             }
         },
         async runOperation() {
+            this.run_disabled = true
+            this.run_btn_text = "Running"
             try {
                 if (this.selectedOperation == 'stab_vid') {
 
                 } else if (this.selectedOperation == 'crop_roi') {
-                    this.show = 'frame'
-                    if (!this.operationOptions.shape || this.operationOptions.shape.length == 0) {
-                        if (this.shapes && this.shapes.length > 0) {
-                            debugger
-                            this.operationOptions.shape = this.cvtRealPixelValues(this.shapes)
-                        } else {
-                            alert('Please draw the shape or select a shape first')
-                            return
-                        }
+
+                    if (!this.operationOptions.shape_str || this.operationOptions.shape_str.length == 0) {
+                        alert('Please draw the shape or select a shape first')
+                        return
                     }
+                    this.operationOptions.shape = JSON.parse(this.operationOptions.shape_str)
+                    this.show = 'frame'
                 } else if (this.selectedOperation == 'set_pixel') {
                     const csvName = this.operationOptions.drill_hole_data
                 }
                 let resp = await api.runOperation(this.selectedAnalysis, this.selectedOperation, this.operationOptions)
                 if (resp.code == '000') {
+                    this.show = 'video'
                     if (this.operationOptions.output_path) {
-                        this.show = 'video'
                         this.frameSrc = `${config.backendUrl}/video/${this.selectedAnalysis}/${this.operationOptions.output_path}`
+                        this.getFiles(this.selectedAnalysis)
+                    } else if (this.operationOptions.input_path) {
+                        this.frameSrc = `${config.backendUrl}/video/${this.selectedAnalysis}/${this.operationOptions.input_path}`
                         this.getFiles(this.selectedAnalysis)
                     }
                 }
+
             } catch (err) {
                 console.error(err)
+            } finally {
+                this.run_disabled = false
+                this.run_btn_text = "Run"
             }
         },
         async getAnalysis() {
@@ -343,12 +401,31 @@ export default {
                 console.error(err)
             }
         },
+        base64ToBlob(base64String) {
+            // Remove data URL prefix if present
+            const base64Data = base64String.replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+
+            // Convert base64 to binary
+            const binaryString = window.atob(base64Data);
+            const bytes = new Uint8Array(binaryString.length);
+
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            // Create and return Blob
+            return new Blob([bytes], { type: 'image/jpeg' });
+        },
         connectWebSocket() {
             const ws = new WebSocket(config.backendUrlWs);
+            console.log("WebSocket connected.")
+            const imgElement = this.$refs.frame_img
             ws.onmessage = (event) => {
-                if (this.show != 'frame') {
-                    this.show = 'frame'
-                }
+                console.log("WebSocket msg received")
+                // if (this.show != 'frame') {
+                //     this.show = 'frame'
+                // }
+                URL.revokeObjectURL(imgElement.src);
                 this.frameSrc = `data:image/jpeg;base64,${event.data}`;
                 this.frameKey += 1;  // Update the key to force re-rendering
             };
@@ -391,7 +468,7 @@ export default {
                     ctx.strokeStyle = 'black'; // Customize color
                     ctx.lineWidth = 2; // Customize line width
                     ctx.stroke();
-                    this.shapes.push({
+                    this.shapes.value.push({
                         type: 'point',
                         x: startX,
                         y: startY
@@ -438,8 +515,9 @@ export default {
                             w: currentX - startX,
                             h: currentY - startY
                         });
+                        this.operationOptions.shape_str = JSON.stringify(this.cvtRealPixelValues(this.shapes))
                     } else if (this.drawType == 'circle') {
-                        this.shapes.push({
+                        this.shapes.value.push({
                             type: 'circle',
                             x: startX,
                             y: startY,
@@ -564,5 +642,14 @@ export default {
     left: 0;
     /* pointer-events: none; */
     /* Prevent interfering with video controls */
+}
+
+input,
+select {
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-right: 0;
+    font-size: small
 }
 </style>

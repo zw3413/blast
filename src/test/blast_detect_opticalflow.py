@@ -28,7 +28,6 @@ async def slungshot_OpticalFlow(input_path, output_path=None):
         imgHSV = getHSVFromMagAng(mag, ang, threshold=2)
         img_BGR = cv2.cvtColor(imgHSV, cv2.COLOR_HSV2BGR)
         img_show = img_BGR + frame
-        
         slungshot = detectSlungshotFromFlow(flow, min_speed=2)
         drawResultOnFrame(slungshot, img_show, "Speed")
         video.visualization = img_show

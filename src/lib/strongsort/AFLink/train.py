@@ -15,9 +15,9 @@ from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
-import AFLink.config as cfg
-from AFLink.model import PostLinker
-from AFLink.dataset import LinkData
+from . import config as cfg
+from .model import PostLinker
+from .dataset import LinkData
 
 def train(save: bool):
     model = PostLinker()

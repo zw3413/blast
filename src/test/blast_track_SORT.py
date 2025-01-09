@@ -23,7 +23,6 @@ async def track_SORT(input_path, output_path=None):
 
         mask = results > 2
         detections = getDetectionsFromMask(mask)
-        #detections = extract_object(results,1,20)
         drawResultOnFrame(detections, frame, "Diff")
         try:
             tracks = tracker.update(np.array(detections))

@@ -1,6 +1,10 @@
 import cv2
 import numpy as np
-import json
+import json,csv
+import multiprocessing
+import os, sys
+sys.path.append(os.path.join(os.getcwd(),"src"))
+from lib.ByteTrack.yolox.tracker.byte_tracker import STrack
 
 def calc_optical_flow(prev_gray, gray):
     if cv2.cuda.getCudaEnabledDeviceCount() > 0 :      
@@ -40,170 +44,69 @@ def calc_frame_diff(prev_gray, gray):
 
         return final_mask
 
-# def extract_object(mask, min_size=0, max_size=np.inf):
-#     contours, _ = cv2.findContours(
-#         mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-#     )
-#     objects = []
-#     for contour in contours:
-#         area = cv2.contourArea(contour)
-#         if  min_size <= area <= max_size * max_size:
-#             x, y, w, h = cv2.boundingRect(contour)
-#             obj = [x,y,x+w,y+h,0.99]
-#             objects.append(obj)
-#     return np.array(objects)
+def detect_by_frame_diff(prev_gray, curr_gray):
+    results = calc_frame_diff(prev_gray, curr_gray)
+    min_speed =2 # pixel diff between frames
+    mask = results > min_speed
+    detections = getDetectionsFromMask(mask)
+    return np.array(detections)
 
-def draw_tracks(frame, tracks):
+def detect_by_optical_flow(prev_gray, curr_gray):
+    flow = calc_optical_flow(prev_gray, curr_gray)
+    # positive_y_flow = np.array(flow.copy())
+    # negative_y_flow = flow.copy()
+    # positive_y_flow[ positive_y_flow[:, :, 1] < 0 ]  = (0,0)
+    # negative_y_flow[negative_y_flow[:, :, 1] > 0] = (0,0)
+    use_flow = flow
+    mag, ang = cv2.cartToPolar(use_flow[:, :, 0], use_flow[:, :, 1])
+    imgHSV = getHSVFromMagAng(mag, ang, threshold=2)
+    return detectSlungshotFromFlow(flow, min_speed=2)
+
+def draw_tracks_strongSORT(frame, tracks):
     # Draw tracked objects on the frame
     for track in tracks:
+        l = len(track) 
+        if l == 6:
+            cls = track[5]
+            track = track[:5]
         x1, y1, x2, y2, track_id = track
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
-        cv2.putText(frame, f"ID: {int(track_id)}", (x1, y1 - 10),
+        if l == 6:
+            cv2.putText(frame, f"{cls}-ID: {int(track_id)}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)    
+        else:
+            cv2.putText(frame, f"ID: {int(track_id)}", (x1, y1 - 10),
         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)    
+
+def draw_tracks_ByteTrack(frame, tracks):
+    # Draw tracked objects on the frame
+    for track in tracks:
+        track_id = track.track_id
+        if track_id == 269:
+            print(track)
+            pass
+        bbox = track.tlbr  # Top-left, bottom-right format
+        x1, y1, x2, y2 = map(int, bbox)
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+        cv2.putText(frame, f"ID: {track_id}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
 def calc_homography(geo_coords, pixel_coords, all_geo_coords):
-    # Step 1: Input data
-    # Geographic coordinates (latitude, longitude) for 4 known points
     geo_coords = np.array([
         [429273.8, 5266303.1],
         [429301.28,5266318.62],
         [429237.18,5266366.5],
         [429264.41,5266382.41]
     ])
-    # Corresponding pixel coordinates on the drone footage
     pixel_coords = np.array([
         [938,931],
         [1370,1106],
         [1306,670],
         [1736,753]
     ])
-    # All geographic coordinates that need to be mapped to pixels
-    all_geo_coords = np.array([
-        [429273.8,5266303.1],
-        [429278.4,5266305.26],
-        [429282.98,5266307.93],
-        [429287.55,5266310.6],
-        [429292.13,5266313.28],
-        [429296.71,5266315.95],
-        [429301.28,5266318.62],
-        [429273.79,5266307.89],
-        [429278.37,5266310.56],
-        [429282.95,5266313.24],
-        [429287.52,5266315.91],
-        [429292.1,5266318.58],
-        [429296.67,5266321.26],
-        [429269.18,5266310.53],
-        [429273.76,5266313.2],
-        [429278.34,5266315.87],
-        [429282.96,5266318.73],
-        [429287.4,5266321.27],
-        [429292.07,5266323.89],
-        [429296.64,5266326.57],
-        [429269.15,5266315.83],
-        [429273.73,5266318.51],
-        [429278.3,5266321.18],
-        [429282.35,5266324.86],
-        [429287.46,5266326.53],
-        [429292.03,5266329.2],
-        [429265.22,5266318.63],
-        [429269.12,5266321.14],
-        [429273.7,5266323.82],
-        [429278.27,5266326.49],
-        [429282.85,5266329.16],
-        [429287.42,5266331.84],
-        [429292,5266334.51],
-        [429264.51,5266323.78],
-        [429269.09,5266326.45],
-        [429273.66,5266329.12],
-        [429278.24,5266331.8],
-        [429282.82,5266334.47],
-        [429287.39,5266337.15],
-        [429259.9,5266326.41],
-        [429264.48,5266329.09],
-        [429269.06,5266331.76],
-        [429273.63,5266334.43],
-        [429278.21,5266337.11],
-        [429282.78,5266339.78],
-        [429287.36,5266342.45],
-        [429259.87,5266331.72],
-        [429264.45,5266334.39],
-        [429269.02,5266337.07],
-        [429273.6,5266339.74],
-        [429278.18,5266342.42],
-        [429282.75,5266345.09],
-        [429256.01,5266333.57],
-        [429259.84,5266337.03],
-        [429264.41,5266339.7],
-        [429268.99,5266342.38],
-        [429273.57,5266345.05],
-        [429278.14,5266347.72],
-        [429282.72,5266350.4],
-        [429255.23,5266339.66],
-        [429259.81,5266342.34],
-        [429264.38,5266345.01],
-        [429268.96,5266347.69],
-        [429274.1,5266350.34],
-        [429278.07,5266354.15],
-        [429250.62,5266342.3],
-        [429255.2,5266344.97],
-        [429259.77,5266347.65],
-        [429264.35,5266350.32],
-        [429268.93,5266352.99],
-        [429274.05,5266354.96],
-        [429278.08,5266358.34],
-        [429250.59,5266347.61],
-        [429255.16,5266350.28],
-        [429259.74,5266352.96],
-        [429264.32,5266355.63],
-        [429268.89,5266358.3],
-        [429273.47,5266360.98],
-        [429246.57,5266350.19],
-        [429250.56,5266352.92],
-        [429255.13,5266355.59],
-        [429259.71,5266358.26],
-        [429264.28,5266360.94],
-        [429268.86,5266363.61],
-        [429273.44,5266366.29],
-        [429245.95,5266355.55],
-        [429250.52,5266358.23],
-        [429255.1,5266360.9],
-        [429259.68,5266363.57],
-        [429264.25,5266366.25],
-        [429268.83,5266368.92],
-        [429241.34,5266358.19],
-        [429245.92,5266360.86],
-        [429250.49,5266363.53],
-        [429255.07,5266366.21],
-        [429259.64,5266368.88],
-        [429264.22,5266371.56],
-        [429268.8,5266374.23],
-        [429241.31,5266363.5],
-        [429245.57,5266365.85],
-        [429250.46,5266368.84],
-        [429255.04,5266371.52],
-        [429259.61,5266374.19],
-        [429264.19,5266376.86],
-        [429237.18,5266366.5],
-        [429241.27,5266368.8],
-        [429245.85,5266371.48],
-        [429250.43,5266374.15],
-        [429255,5266376.83],
-        [429259.58,5266379.5],
-        [429264.41,5266382.41]
-        # Add more coordinates as needed
-    ])
-    # Step 2: Compute the homography matrix
-    # Convert the coordinates to the appropriate shape
     H, _ = cv2.findHomography(geo_coords, pixel_coords, method=0)
-    # Step 3: Map other geographic coordinates to pixel coordinates
-    # Add a column of ones to make the coordinates homogeneous
     homogeneous_geo_coords = np.hstack([all_geo_coords, np.ones((all_geo_coords.shape[0], 1))])
-    # Transform the geographic coordinates to pixel coordinates
     mapped_pixels_homogeneous = np.dot(H, homogeneous_geo_coords.T).T
-    # Convert from homogeneous coordinates back to 2D
     mapped_pixels = mapped_pixels_homogeneous[:, :2] / mapped_pixels_homogeneous[:, 2][:, np.newaxis]
-    # Step 4: Output the results
     for geo, pixel in zip(all_geo_coords, mapped_pixels):
         print(f"Geographic coordinate {geo} maps to pixel coordinate {pixel}")
     return mapped_pixels
@@ -226,26 +129,26 @@ def getHSVFromMagAng(mag, ang, threshold = 2):
     return imgHSV.astype(np.uint8)
     
 def detectSlungshotFromFlow(flow, min_speed = 5, min_size =1, max_size = 100):
-        # Calculate magnitude and angle of flow vectors
-        magnitude, angle = cv2.cartToPolar(flow[..., 0], flow[..., 1])
-        # Threshold for fast-moving objects
-        motion_mask = magnitude > min_speed
-        # Find contours of moving objects
-        contours, _ = cv2.findContours(
-            motion_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
-        results = []
-        # Filter contours by size
-        for contour in contours:
-            area = cv2.contourArea(contour)
-            if min_size <= area <= max_size * max_size:
-                x, y, w, h = cv2.boundingRect(contour)
-                # Calculate average magnitude in the region
-                roi_magnitude = magnitude[y : y + h, x : x + w]
-                avg_magnitude = np.mean(roi_magnitude)
-                obj = {"x1":x , "y1":y, "x2": x+w, "y2": y+h , "value": avg_magnitude}
-                results.append(obj)
-        return results
+    # Calculate magnitude and angle of flow vectors
+    magnitude, angle = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+    # Threshold for fast-moving objects
+    motion_mask = magnitude > min_speed
+    # Find contours of moving objects
+    contours, _ = cv2.findContours(
+        motion_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    results = []
+    # Filter contours by size
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if min_size <= area <= max_size * max_size:
+            x, y, w, h = cv2.boundingRect(contour)
+            # Calculate average magnitude in the region
+            roi_magnitude = magnitude[y : y + h, x : x + w]
+            avg_magnitude = np.mean(roi_magnitude)
+            obj = [x , y,  x+w,  y+h ,  avg_magnitude]
+            results.append(obj)
+    return results
 
 def getDetectionsFromMask(mask,min_size = 1, max_size = 100):
     contours, _ = cv2.findContours(
@@ -276,6 +179,208 @@ def drawResultOnFrame(result, frame, label= None):
                 (0, 255, 0),
                 1,
             )
+
+def ecc_refine_bbox_multiprocessing(prev_gray, curr_gray, detections):
+    threads = multiprocessing.cpu_count()
+    with multiprocessing.Pool(processes=threads) as pool:
+        args_list = [( prev_gray, curr_gray, detection) for detection in detections]
+        pool.starmap(ecc_refine_bbox, args_list)
+
+def ecc_refine_bytetrack_multiprocessing(prev_gray, curr_gray, bytetracks):
+    threads = multiprocessing.cpu_count()
+    remove_track_ids = []
+    with multiprocessing.Pool(processes = threads) as pool:
+        args_list = [(prev_gray, curr_gray, track) for track in bytetracks]
+        remove_track_ids = pool.starmap(ecc_refine_bytetrack, args_list)
+        remove_track_ids = np.array(remove_track_ids)
+        return remove_track_ids[remove_track_ids != None]
+
+def ecc_refine_bytetrack(prev_frame, curr_frame, track):
+    x1,y1,w,h = track.tlwh
+    x2 = x1+w
+    y2 = y1+h
+    bbox = [x1,y1,x2,y2]
+    try:
+        refined_bbox = ecc_refine_bbox(prev_frame, curr_frame, bbox)
+    except Exception as e:
+        print(e)
+    
+    if refined_bbox is None:
+        return track.track_id
+        pass
+    else:
+        #track.tlbr = np.array(refined_bbox)
+        r_x1, r_y1, r_x2, r_y2 = refined_bbox
+        r_w = r_x2 - r_x1
+        r_h = r_y2 - r_y1
+        refined_tlwh = [r_x1,r_y1, r_w, r_h]
+        #track.tlwh = refined_tlwh
+        try:
+            refined_xyah = STrack.tlwh_to_xyah(np.array(refined_tlwh).astype(float))
+            track.mean[:4] = refined_xyah
+        except Exception as e:
+            print(e)   
+    # cx = refined_tlwh[0] + refined_tlwh[2] / 2
+    # cy = refined_tlwh[1] + refined_tlwh[3] / 2
+    # aspect_ratio = refined_tlwh[2] / refined_tlwh[3]
+    # height = refined_tlwh[3]
+    # track.mean[:4] = [cx, cy, aspect_ratio, height]
+
+    # Optional: Adjust confidence score
+    #track.score = min(track.score + 0.05, 1.0)
+    
+def ecc_refine_bbox(prev_frame, curr_frame, prev_bbox):
+    # Extract ROI from the previous frame
+    value = 0
+    len_prev_bbox = len(prev_bbox)
+    if len_prev_bbox == 5:
+        value = prev_bbox[4]
+        prev_bbox = prev_bbox[:4]
+    if not hasattr(prev_bbox, 'astype'):
+        prev_bbox = np.array(prev_bbox)
+    x, y, w, h = prev_bbox.astype(int)
+    prev_roi = prev_frame[y:y+h, x:x+w]
+    curr_roi = curr_frame[y:y+h, x:x+w]
+
+    # Define warp matrix (affine transformation)
+    warp_matrix = np.eye(2, 3, dtype=np.float32)
+
+    # Set ECC criteria
+    # Criteria: Adjust the iteration count and epsilon for performance vs. accuracy trade-offs.
+    criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 50, 1e-6)
+
+    # Align current frame ROI to the previous frame ROI
+    try:
+        #Warp Type: Use cv2.MOTION_TRANSLATION, cv2.MOTION_AFFINE, or cv2.MOTION_HOMOGRAPHY depending on the motion complexity.
+        score, warp_matrix = cv2.findTransformECC(
+            prev_roi, curr_roi, warp_matrix, cv2.MOTION_TRANSLATION, criteria
+        )
+        # if(score < 0.9):
+        #     return None
+    except cv2.error as e:
+        print(e)
+        # Return the original bounding box if ECC fails
+        return None
+
+    # Update the bounding box based on the warp matrix
+    dx, dy = warp_matrix[0, 2], warp_matrix[1, 2]
+    new_bbox = [int(x + dx), int(y + dy), w, h]
+    if len_prev_bbox ==5:
+        new_bbox.append(value)
+    return new_bbox
+
+def ecc_validate_track(prev_frame, curr_frame, track_bbox):
+    x, y, w, h = track_bbox
+    prev_roi = prev_frame[y:y+h, x:x+w]
+    curr_roi = curr_frame[y:y+h, x:x+w]
+
+    # Compute ECC similarity
+    warp_matrix = np.eye(2, 3, dtype=np.float32)
+    try:
+        score, _ = cv2.findTransformECC(prev_roi, curr_roi, warp_matrix, cv2.MOTION_TRANSLATION)
+        return score > 0.9  # Threshold for valid track
+    except cv2.error:
+        return False
+
+def ecc_smooth_trajectory(tracks, window_size=5):
+    """
+    Smooths the trajectory of tracked objects using a sliding window.
+
+    Args:
+        tracks (list): List of tracked objects with bounding boxes over frames.
+        window_size (int): Number of frames to average for smoothing.
+
+    Returns:
+        list: Smoothed tracks.
+    """
+    smoothed_tracks = []
+    for track_id in range(len(tracks)):
+        trajectory = [t['bbox'] for t in tracks[track_id][-window_size:]]
+        if len(trajectory) > 1:
+            avg_x = int(sum(b[0] for b in trajectory) / len(trajectory))
+            avg_y = int(sum(b[1] for b in trajectory) / len(trajectory))
+            avg_w = int(sum(b[2] for b in trajectory) / len(trajectory))
+            avg_h = int(sum(b[3] for b in trajectory) / len(trajectory))
+            tracks[track_id][-1]['bbox'] = (avg_x, avg_y, avg_w, avg_h)
+        smoothed_tracks.append(tracks[track_id])
+    return smoothed_tracks
+
+def ecc_filter_noisy_tracks(prev_frame, curr_frame, tracks, threshold=0.8):
+    """
+    Filters tracks that have low ECC similarity scores.
+
+    Args:
+        prev_frame (np.array): Previous frame (grayscale).
+        curr_frame (np.array): Current frame (grayscale).
+        tracks (list): List of tracked objects.
+        threshold (float): Minimum ECC score for a valid track.
+
+    Returns:
+        list: Filtered tracks.
+    """
+    valid_tracks = []
+    for track in tracks:
+        score = ecc_validate_track(prev_frame, curr_frame, track['bbox'])
+        if score >= threshold:
+            valid_tracks.append(track)
+    return valid_tracks
+
+def append_track_result_ByteTrack(tracking_results, tracks, frame_id):
+    for t in tracks:
+        result = {
+            'frame_id': frame_id,
+            'track_id': t.track_id,
+            'x1': t.tlwh[0],
+            'y1': t.tlwh[1],
+            'x2': t.tlwh[0] + t.tlwh[2],
+            'y2': t.tlwh[1] + t.tlwh[3],
+            'confidence': t.score,
+            'class':   t.cls if hasattr(t,"cls") else ''
+        }
+        tracking_results.append(result)
+
+def append_track_result_strongSORT(tracking_results, tracks, frame_id):
+    for t in tracks:
+        result = {
+            'frame_id': frame_id,
+            'track_id': tracks[4],
+            'x1': tracks[0],
+            'y1': tracks[1],
+            'x2': tracks[2],
+            'y2': tracks[3],
+            'confidence': tracks[6],
+            'class':   tracks[5]
+        }
+        tracking_results.append(result)
+
+# Function to save tracking results to a CSV file
+def save_to_csv(tracking_results, output_file):
+    """
+    Save tracking results to a CSV file.
+
+    Parameters:
+        tracking_results (list): List of dictionaries containing tracking data.
+        output_file (str): Path to the CSV file.
+    """
+    with open(output_file, mode='w', newline='') as csvfile:
+        fieldnames = ['frame_id', 'track_id', 'x1', 'y1', 'x2', 'y2', 'confidence', 'class']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for result in tracking_results:
+            writer.writerow(result)
+
+# Function to save tracking results to a JSON file
+def save_to_json(tracking_results, output_file):
+    """
+    Save tracking results to a JSON file.
+
+    Parameters:
+        tracking_results (list): List of dictionaries containing tracking data.
+        output_file (str): Path to the JSON file.
+    """
+    with open(output_file, mode='w') as jsonfile:
+        json.dump(tracking_results, jsonfile, indent=4)
 
 if __name__ == "__main__":
     mapped_pixels = calc_homography(None, None, None)

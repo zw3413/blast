@@ -6,3 +6,15 @@
 
 /* Tailwind's utility classes */
 @tailwind utilities;
+
+@layer utilities {
+    .scrollbar::-webkit-scrollbar {
+      width: 10px;
+    }
+    .scrollbar::-webkit-scrollbar-track {
+      @apply bg-gray-100;
+    }
+    .scrollbar::-webkit-scrollbar-thumb {
+      @apply bg-gray-300 rounded-full hover:bg-gray-400;
+    }
+   }

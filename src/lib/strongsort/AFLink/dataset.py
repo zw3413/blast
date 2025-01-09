@@ -11,7 +11,7 @@ from os.path import join
 from random import randint, normalvariate
 from torch.utils.data import Dataset, DataLoader
 
-import AFLink.config as cfg
+from . import config as cfg
 
 SEQ = {
     'train': [

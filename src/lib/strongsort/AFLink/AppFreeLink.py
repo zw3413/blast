@@ -13,10 +13,10 @@ from os.path import join, exists
 from collections import defaultdict
 from sklearn.preprocessing import normalize
 from scipy.optimize import linear_sum_assignment
-import AFLink.config as cfg
-from AFLink.train import train
-from AFLink.dataset import LinkData
-from AFLink.model import PostLinker
+from . import config as cfg
+from .train import train
+from .dataset import LinkData
+from .model import PostLinker
 INFINITY = 1e5
 
 class AFLink:

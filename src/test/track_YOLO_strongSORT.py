@@ -1,15 +1,25 @@
+import asyncio
 import torch
 import numpy as np
 import cv2
-import os
+import os,sys
+
+sys.path.append(os.path.join(os.getcwd(),"src"))
+
+from func.utils import add_suffix_to_filename
+from func.methods import *
+from func.video import Video
 from time import perf_counter
 from ultralytics import YOLO
 from pathlib import Path
 
 import supervision as sv
+
+
 from strongsort.strong_sort import StrongSORT
 
-from src.func.utils import YamlParser
+sys.path.append(os.path.join(os.getcwd(),"src"))
+from func.YamlParser import YamlParser
 
 
 SAVE_VIDEO =True
@@ -51,7 +61,7 @@ class ObjectDetection:
         )
 
     def load_model(self):
-        model = YOLO("yolov8s-seg.pt")
+        model = YOLO("yolov8n-seg.pt")
         model.fuse()
         return model
     
@@ -85,58 +95,65 @@ class ObjectDetection:
             self.labels = [f"{self.CLASS_NAMES_DICT[class_id]} {confidence:0.2f}"
                            for _, confidence, class_id, tracker_id in detections
                            ]
-            frame = self.box_annotator.annotate(scene= frame, detections=detections, labels= self.labels)
+            frame = self.box_annotator.annotate(scene= frame, detections=detections)
+        return frame,None
         
-        def __call__(self):
-            cap = cv2.VideoCapture(self.capture_index)
-            assert cap.isOpened()
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    async def __call__(self, input_path, output_path=None):
+       
+        if output_path is None:
+            output_path = add_suffix_to_filename(input_path, "StrongSORT")
+        video = Video(path,output_path)
+        assert video.is_cap_opended()
 
-            if SAVE_VIDEO:
-                outputvid = cv2.VideoWriter('./temp/result_tracking.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 8 ,(1280,720))
+        tracker = self.tracker
+        tracker.model.warmup()
+
+        outputs = [None]
+        curr_frames, prev_frames = None, None
+
+        while True:
+            start_time = perf_counter()
+            ret, frame = await video.read()
+            if not ret:
+                break
+            # results = self.predict(frame)
+            # frame, _= self.draw_results(frame, results)
             
-            tracker = self.tracker
-            tracker.model.warmup()
-
-            outputs = [None]
-            curr_frames, prev_frames = None, None
-
-            while True:
-                start_time = perf_counter()
-                ret, frame = cap.read()
-                assert ret
-                results = self.predict(frame)
-                frame, _= self.draw_results(frame, results)
-                
-                if prev_frames is not None and curr_frames is not None:
-                    tracker.tracker.camera_update(prev_frames, curr_frames)
-
-                for result in results:
-                    outputs[0] = tracker.update(result,frame)
-                    for i, (output) in enumerate(outputs[0]):
-                        bbox = output[0:4]
-                        tracked_id = output[4]
-                        #cls = output[5]
-                        #conf = output[6]
-                        top_left = (int(bbox[-2]-100), int(bbox[1]))
-                        cv2.putText(frame, f"ID : {tracked_id}", top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0),3 )
+            if video.prev_frame is not None and frame is not None:
+                tracker.tracker.camera_update(video.prev_frame, frame)
+            
+            results = calc_frame_diff(video.prev_gray, video.gray)
+            min_speed =2 # pixel diff between frames
+            mask = results > min_speed
+            detections = getDetectionsFromMask(mask)
+            
+            array2_tiled = np.tile([16], (len(detections), 1))
+            dets = np.hstack((detections,array2_tiled))
+            tensor = torch.from_numpy(np.array(dets))
+            if tensor.shape[0] > 0:
+                outputs = tracker.update(tensor,frame)
+                if len(outputs) > 0:
+                    tracks = outputs[:, :6]
+                    # for i, (output) in enumerate(outputs):
+                    #     bbox = output[0:4]
+                    #     tracked_id = output[4]
+                    draw_tracks(frame, tracks)
+                    #cls = output[5]
+                    #conf = output[6]
                     
-                    end_time = perf_counter()
-                    fps = 1/np.round(end_time - start_time, 2)
-
-                    cv2.putText(frame, f'FPS:{int(fps)}', (20,70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,255,0), 2)
-                    cv2.imshow('YOLOv8 Detection', frame)
+                    #top_left = (int(bbox[-2]-100), int(bbox[1]))
+                    #cv2.putText(frame, f"ID : {tracked_id}", top_left, cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0),3 )
                     
-                    if SAVE_VIDEO:
-                        outputvid.write(frame)
-                    if cv2.waitKey(5) & 0xFF ==27:
-                        break
-                if SAVE_VIDEO:
-                    outputvid.release()
-                cap.release()
-                cv2.destroyAllWindows()
+            end_time = perf_counter()
+            fps = 1/np.round(end_time - start_time, 2)
+            cv2.putText(frame, f'FPS:{int(fps)}', (20,70), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,255,0), 2)
+            cv2.imshow('YOLOv8 Detection', frame)        
+            if cv2.waitKey(5) & 0xFF ==27:
+                break
+        video.release()
+        cv2.destroyAllWindows()
 
 
 detector = ObjectDetection(capture_index=0)
-detector()
+path = "./temp/123/340_102_clipped_ROI_stabv.mp4"
+asyncio.run(detector(path))

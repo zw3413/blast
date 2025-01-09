@@ -5,7 +5,7 @@ from . import kalman_filter
 from . import linear_assignment
 from . import iou_matching
 from .track import Track
-from opts import opt
+from ..opts import opt
 
 class Tracker:
     """

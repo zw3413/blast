@@ -7,12 +7,12 @@ import os
 import cv2
 import numpy as np
 
-from application_util import preprocessing
-from application_util import visualization
-from deep_sort import nn_matching
-from deep_sort.detection import Detection
-from deep_sort.tracker import Tracker
-from opts import opt
+from .application_util import preprocessing
+from .application_util import visualization
+from .deep_sort import nn_matching
+from .deep_sort.detection import Detection
+from .deep_sort.tracker import Tracker
+from .opts import opt
 
 
 def gather_sequence_info(sequence_dir, detection_file):
@@ -115,7 +115,7 @@ def create_detections(detection_mat, frame_idx, min_height=0):
         Returns detection responses at given frame index.
 
     """
-    frame_indices = detection_mat[:, 0].astype(np.int)
+    frame_indices = detection_mat[:, 0].astype(np.int32)
     mask = frame_indices == frame_idx
 
     detection_list = []

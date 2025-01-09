@@ -1,7 +1,7 @@
 # vim: expandtab:ts=4:sw=4
 import numpy as np
-from deep_sort.kalman_filter import KalmanFilter
-from opts import opt
+from .kalman_filter import KalmanFilter
+from ..opts import opt
 
 class TrackState:
     """
