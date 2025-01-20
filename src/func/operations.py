@@ -15,6 +15,36 @@ from strongsort.strong_sort import StrongSORT
 import torch
 import traceback
 
+async def smoke(input_path, output_path , options):
+    video = Video(input_path, output_path)
+    # Initialize background subtractor
+    backSub = cv2.createBackgroundSubtractorMOG2(
+        history=100, varThreshold=50, detectShadows=False
+    )
+    # Initialize motion history
+    mhi = np.zeros((video.height, video.width), dtype=np.float32)
+    while video.is_cap_opended():
+        try:
+            ret, frame = await video.read()
+            if not ret:
+                break
+            fgMask = backSub.apply(frame)
+            kernel = np.ones((5, 5), np.uint8)
+            fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_OPEN, kernel) #open
+            fgMask = cv2.morphologyEx(fgMask, cv2.MORPH_CLOSE, kernel) #close
+            smoke_area = np.sum(fgMask > 0)
+            overlay = cv2.cvtColor(fgMask, cv2.COLOR_GRAY2BGR)
+            visualization = frame.copy()
+            visualization = cv2.addWeighted(visualization,1,overlay,0.5,0)
+            video.visualization = visualization
+            video.write_frame = visualization
+        except Exception as e:
+            print(traceback.format_exc())
+            print(e)
+            raise e
+    video.release()
+
+
 async def slungshot(input_path, output_path , options ):
     DetectAlgo = options['algorithm_detect']
     TrackAlgo = options["algorithm_track"]
@@ -24,7 +54,7 @@ async def slungshot(input_path, output_path , options ):
     #         output_path = add_suffix_to_filename(input_path, "SlungshotOpticalFlow")
     await slungshot_execute(input_path,output_path, DetectAlgo, TrackAlgo)
 
-async def slungshot_execute(input_path, output_path, DetectAlgo, TrackAlgo):
+async def slungshot_execute(input_path, output_path, DetectAlgo, TrackAlgo, WS_Enable = True):
     output_path = add_suffix_to_filename(output_path, DetectAlgo)
     output_path = add_suffix_to_filename(output_path, TrackAlgo)
     file_path = Path(output_path)
@@ -49,10 +79,11 @@ async def slungshot_execute(input_path, output_path, DetectAlgo, TrackAlgo):
     cfg = YamlParser()
     cfg.merge_from_file(tracker_config)
     reid_weights = Path("weights/osnet_x0_25_msmt17.pt") 
+    #reid_weights = Path("weights/osnet_x0_5_msmt17.pt") 
     device = 'cuda'
     while video.is_cap_opended():
         try:
-            ret, frame = await video.read()
+            ret, frame = await video.read(enable_ws = WS_Enable)
             if not ret:
                 break
             detections = None

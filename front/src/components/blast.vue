@@ -1,18 +1,18 @@
 <template>
-    <div class="flex flex-row w-full min-h-screen max-h-screen overflow-hidden text-white">
+    <div class="flex flex-row w-full min-h-screen max-h-screen overflow-hidden bg-white">
         <div class="flex flex-col h-screen w-60 ">
             <img src="/cotegold.png" alt="logo" class=" w-full" />
             <ul
                 class="flex flex-col h-full space-y-1 p-2 border-r-2 border-gray-800 overflow-y-auto divide-y divide-gray-800 scrollbar">
                 <li v-for="analysis in analysis_list" :key="analysis.id" class="p-2 flex items-center ">
-                    <a class="flex text-gray-300 cursor-pointer" @click="getFiles(analysis.id)"> {{ analysis.name }}</a>
+                    <a class="flex  cursor-pointer" @click="getFiles(analysis.id)"> {{ analysis.name }}</a>
                 </li>
             </ul>
 
             <div class="flex flex-col space-y-2  justify-end">
                 <div class="flex flex-row h-8 justify-end ">
                     <input type="text" class="text-black p-2" v-model="analysis_name">
-                    <button type="button" @click="createHandler" class="ml-auto text-white">create</button>
+                    <button type="button" @click="createHandler" class="ml-auto ">create</button>
                 </div>
               
                 <img src="/gdg.png" alt="logo" class=" w-full" />
@@ -41,7 +41,7 @@
 
                     </ul>
                 </div>
-                <div class="hidden rounded-lg h-9/10  w-full  flex flex-row overflow-y-auto" id="VideoPlayer"
+                <div class="hidden rounded-lg h-9/10  w-full  flex flex-row " id="VideoPlayer"
                     role="tabpanel" aria-labelledby="VideoPlayer-tab">
                     <div class="flex flex-col p-1 space-y-2 w-20 text-left items-center">
                         <input type="checkbox" class="mt-10" v-model="canvasCheckbox" />Draw
@@ -56,7 +56,7 @@
                         <button class="flex" @click="uploadShpaes">Save</button>
                     </div>
                     <div
-                        class="flex flex-col max-h-full w-full flex-shrink-1 min-w-[100px] overflow-x-hidden items-center grid place-items-center">
+                        class="flex flex-col max-h-full w-full flex-shrink-1 min-w-[100px]  items-center grid place-items-center">
                         <div ref="video_container" class=" w-full relative ">
 
                             <video id="my-video"
@@ -75,7 +75,7 @@
 
                         </div>
                     </div>
-                    <div class="flex flex-col text-white w-[500px] items-center justify-center">
+                    <div class="flex flex-col  w-[500px] items-center justify-center">
                         video info
                     </div>
                 </div>
@@ -89,7 +89,7 @@
                         class="flex-shrink-1   justify-left object-contain w-full max-h-full object-contain" />
                 </div>
                 
-                    <div class="flex flex-col text-white w-[500px] items-center justify-center"></div>
+                    <div class="flex flex-col  w-[500px] items-center justify-center"></div>
                 </div>
             </div>
 <!--operations-->
@@ -100,42 +100,42 @@
                         <input id="default-radio-1" type="radio" value="stab_vid" v-model="selectedOperation"
                             name="selectedOperation"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
-                        <label for="default-radio-1" class="ms-2 text-sm font-medium text-gray-300 ">Stablize
+                        <label for="default-radio-1" class="ms-2 text-sm font-medium  ">Stablize
                             Vidstab</label>
                     </div>
                     <div class="flex items-center">
                         <input checked id="default-radio-2" type="radio" value="crop_roi" v-model="selectedOperation"
                             name="selectedOperation"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
-                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Crop ROI</label>
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium  ">Crop ROI</label>
                     </div>
 
                     <div class="flex items-center">
                         <input checked id="default-radio-2" type="radio" value="set_pixel" v-model="selectedOperation"
                             name="selectedOperation"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500  focus:ring-2 ">
-                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Set Pixel</label>
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium  ">Set Pixel</label>
                     </div>
 
                     <div class="flex items-center">
                         <input checked id="default-radio-2" type="radio" value="slungshot" v-model="selectedOperation"
                             name="selectedOperation"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
-                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Slungshot</label>
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium  ">Slungshot</label>
                     </div>
 
                     <div class="flex items-center">
                         <input checked id="default-radio-2" type="radio" value="fragmentation"
                             v-model="selectedOperation" name="selectedOperation"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
-                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Fragmentation</label>
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium  ">Fragmentation</label>
                     </div>
 
                     <div class="flex items-center">
                         <input checked id="default-radio-2" type="radio" value="smoke" v-model="selectedOperation"
                             name="selectedOperation"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500   focus:ring-2  ">
-                        <label for="default-radio-2" class="ms-2 text-sm font-medium text-gray-300 ">Smoke</label>
+                        <label for="default-radio-2" class="ms-2 text-sm font-medium  ">Smoke</label>
                     </div>
 
                 </div>
@@ -165,7 +165,7 @@
                     </div>
                     <ul class="">
                         <li v-for="file in file_list" :key="file.id">
-                            <a @click="selectFile(file)" class="cursor-pointer text-gray-300">{{ file.name }}</a>
+                            <a @click="selectFile(file)" class="cursor-pointer ">{{ file.name }}</a>
                         </li>
                     </ul>
                 </div>
@@ -395,7 +395,16 @@ export default {
             try {
                 this.selectedAnalysis = analysis_id
                 let resp = await api.getFiles(analysis_id)
-                this.file_list = resp.data
+                this.file_list = resp.data.sort((a, b) => {
+                    if (a.name < b.name) {
+                        return -1; 
+                    }
+                    if (a.name > b.name) {
+                        return 1;
+                    }
+                    return 0; 
+                    });
+                
 
             } catch (err) {
                 console.error(err)

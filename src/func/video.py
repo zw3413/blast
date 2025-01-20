@@ -59,10 +59,9 @@ class Video:
             frame_base64 = base64.b64encode(buffer).decode('utf-8')
             if self.frame_queue.qsize() < 30:
                 await self.frame_queue.put(frame_base64)
-                await asyncio.sleep(0.01)
+                #await asyncio.sleep(0.01)
             else:
-                pass
-                #await asyncio.sleep(0.1)
+                await asyncio.sleep(0.01)
         if self.out is not None and (self.frame is not None or self.write_frame is not None):
             if self.write_frame is not None:
                 self.out.write(self.write_frame)

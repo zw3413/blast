@@ -60,6 +60,14 @@ const config = {
         required: true,
         description: 'Track Algorithm'
       }
+    ],
+    smoke: [
+      {
+        name: 'input_path',
+        type: 'input',
+        required: true,
+        description: 'The video file to be detect'
+      }
     ]
   }
 };

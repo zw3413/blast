@@ -5,19 +5,19 @@ import Blast from '@/components/blast.vue'
 const routes = [
   {
     path: '/', // URL path for the WebSocket page
-    name: 'Home',
-    component: Home,
-  },  
-  {
-    path: '/blast', // URL path for the WebSocket page
     name: 'Blast',
     component: Blast,
   },  
-  {
-    path: '/websocket', // URL path for the WebSocket page
-    name: 'WebSocket',
-    component: WebSocketClient,
-  },
+  // {
+  //   path: '/blast', // URL path for the WebSocket page
+  //   name: 'Blast',
+  //   component: Blast,
+  // },  
+  // {
+  //   path: '/websocket', // URL path for the WebSocket page
+  //   name: 'WebSocket',
+  //   component: WebSocketClient,
+  // },
 ];
 
 const router = createRouter({

@@ -6,7 +6,7 @@ import os, sys
 sys.path.append(os.path.join(os.getcwd(),"src"))
 from lib.ByteTrack.yolox.tracker.byte_tracker import STrack
 
-def calc_optical_flow(prev_gray, gray):
+def calc_optical_flow(prev_gray, gray, poly_n=5, poly_sigma=0.8):
     if cv2.cuda.getCudaEnabledDeviceCount() > 0 :      
         #print("calc_optical_flow Using GPU")  
         flow = cv2.calcOpticalFlowFarneback(
@@ -17,8 +17,8 @@ def calc_optical_flow(prev_gray, gray):
             levels=3,
             winsize=15,
             iterations=3,
-            poly_n=5,
-            poly_sigma=1.2,
+            poly_n=poly_n,
+            poly_sigma=poly_sigma,
             flags=0,
         )
         return flow
@@ -28,7 +28,7 @@ def calc_optical_flow(prev_gray, gray):
         gpu_previous.upload(prev_gray)
         gpu_current= cv2.cuda_GpuMat()
         gpu_current.upload(gray)
-        gpu_flow = cv2.cuda.FarnebackOpticalFlow.create(3, 0.5, False, 15, 3, 5, 1.1, 0 )
+        gpu_flow = cv2.cuda.FarnebackOpticalFlow.create(3, 0.5, False, 15, 3, poly_n, poly_sigma, 0 )
         aflow = cv2.cuda.GpuMat()
         aflow = gpu_flow.calc( gpu_previous, gpu_current, aflow, None )
         flow = aflow.download()
@@ -91,19 +91,19 @@ def draw_tracks_ByteTrack(frame, tracks):
         cv2.putText(frame, f"ID: {track_id}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         
 def calc_homography(geo_coords, pixel_coords, all_geo_coords):
-    geo_coords = np.array([
-        [429273.8, 5266303.1],
-        [429301.28,5266318.62],
-        [429237.18,5266366.5],
-        [429264.41,5266382.41]
-    ])
-    pixel_coords = np.array([
-        [938,931],
-        [1370,1106],
-        [1306,670],
-        [1736,753]
-    ])
-    H, _ = cv2.findHomography(geo_coords, pixel_coords, method=0)
+    # geo_coords = np.array([
+    #     [429273.8, 5266303.1],
+    #     [429301.28,5266318.62],
+    #     [429237.18,5266366.5],
+    #     [429264.41,5266382.41]
+    # ])
+    # pixel_coords = np.array([
+    #     [938,931],
+    #     [1370,1106],
+    #     [1306,670],
+    #     [1736,753]
+    # ])
+    H, _ = cv2.findHomography(np.array(geo_coords), np.array(pixel_coords), method=0)
     homogeneous_geo_coords = np.hstack([all_geo_coords, np.ones((all_geo_coords.shape[0], 1))])
     mapped_pixels_homogeneous = np.dot(H, homogeneous_geo_coords.T).T
     mapped_pixels = mapped_pixels_homogeneous[:, :2] / mapped_pixels_homogeneous[:, 2][:, np.newaxis]
@@ -343,13 +343,13 @@ def append_track_result_strongSORT(tracking_results, tracks, frame_id):
     for t in tracks:
         result = {
             'frame_id': frame_id,
-            'track_id': tracks[4],
-            'x1': tracks[0],
-            'y1': tracks[1],
-            'x2': tracks[2],
-            'y2': tracks[3],
-            'confidence': tracks[6],
-            'class':   tracks[5]
+            'track_id': t[4],
+            'x1': t[0],
+            'y1': t[1],
+            'x2': t[2],
+            'y2': t[3],
+            'confidence': t[6],
+            'class':   t[5]
         }
         tracking_results.append(result)
 

@@ -82,6 +82,8 @@ async def run_operation(operation: Operation):
             await set_pixel(input, new_file_path)
         elif operation.op == "slungshot":
             await slungshot(input, output, operation.options)
+        elif operation.op == "smoke":
+            await smoke(input, output, operation.options)
         else:
             print("unknown operation ")
             print(operation)
