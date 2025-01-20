@@ -4,3 +4,7 @@ node_modules
 .vscode
 node_modules
 RsCarData
+dataset
+weights
+temp
+yolo*.pt
