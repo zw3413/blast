@@ -7,4 +7,4 @@ npm run dev
 
 # Introduction
 
-[BlastVision](BlastVision.pdf)
+[BlastVision](./docs/BlastVision.pdf)
