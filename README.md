@@ -5,14 +5,6 @@ cd front
 npm run dev
 
 
+# Introduction
 
-# Algorithms
-
-## Optical Flow
-FarnebackOpticalFlow
-
-
-
-## morphological operations
-cv2.morphologyEx
-
+[BlastVision](BlastVision.pdf)
